@@ -1,11 +1,11 @@
-# Build argument for base image selection
-ARG BASE_IMAGE=nvidia/cuda:12.6.3-cudnn-runtime-ubuntu24.04
-
-# Stage 1: Base image with common dependencies
-FROM ${BASE_IMAGE} AS base
+# Use multi-stage build with caching optimizations
+# Base image MUST be CUDA 12.8 or newer for RTX 5090 (Blackwell) support.
+# Using the specified devel image for multi-stage build best practices.
+FROM nvidia/cuda:12.8.1-devel-ubuntu22.04 AS base
 
 # Build arguments for this stage with sensible defaults for standalone builds
 ARG COMFYUI_VERSION=latest
+# Note: For CUDA 12.8, PyTorch 2.0+ is often needed. Ensure PyTorch is installed or updated correctly.
 ARG CUDA_VERSION_FOR_COMFY
 ARG ENABLE_PYTORCH_UPGRADE=false
 ARG PYTORCH_INDEX_URL
@@ -71,32 +71,40 @@ ADD src/extra_model_paths.yaml ./
 COPY scripts/comfy-node-install.sh /usr/local/bin/comfy-node-install
 RUN chmod +x /usr/local/bin/comfy-node-install
 
-# --- START: Custom Nodes Section ---
+---
+
+## 🚀 Custom Nodes Section
+
+*The following steps clone and install custom nodes and their dependencies.*
+
+```dockerfile
 # Install ComfyUI Manager
-RUN git clone https://github.com/Comfy-Org/ComfyUI-Manager.git /comfyui/custom_nodes/ComfyUI-Manager && \
+RUN git clone [https://github.com/Comfy-Org/ComfyUI-Manager.git](https://github.com/Comfy-Org/ComfyUI-Manager.git) /comfyui/custom_nodes/ComfyUI-Manager && \
     uv pip install -r /comfyui/custom_nodes/ComfyUI-Manager/requirements.txt
 
 # Install ComfyUI-GGUF
-RUN git clone https://github.com/city96/ComfyUI-GGUF.git /comfyui/custom_nodes/ComfyUI-GGUF && \
+RUN git clone [https://github.com/city96/ComfyUI-GGUF.git](https://github.com/city96/ComfyUI-GGUF.git) /comfyui/custom_nodes/ComfyUI-GGUF && \
     uv pip install -r /comfyui/custom_nodes/ComfyUI-GGUF/requirements.txt
-# --- END: Custom Nodes Section ---
 
-# Go back to the root
+# Install ComfyUI-VideoHelperSuite (Your new custom node)
+RUN git clone [https://github.com/Kosinkadink/ComfyUI-VideoHelperSuite.git](https://github.com/Kosinkadink/ComfyUI-VideoHelperSuite.git) /comfyui/custom_nodes/ComfyUI-VideoHelperSuite && \
+    uv pip install -r /comfyui/custom_nodes/ComfyUI-VideoHelperSuite/requirements.txt
+
+    Go back to the root
 WORKDIR /
 
-# Install Python runtime dependencies for the handler
+Install Python runtime dependencies for the handler
 RUN uv pip install runpod requests websocket-client
 
-# Add application code and scripts
-ADD src/start.sh handler.py test_input.json ./
-RUN chmod +x /start.sh
+Add application code and scripts
+ADD src/start.sh handler.py test_input.json ./ RUN chmod +x /start.sh
 
-# Prevent pip from asking for confirmation during uninstall steps in custom nodes
+Prevent pip from asking for confirmation during uninstall steps in custom nodes
 ENV PIP_NO_INPUT=1
 
-# Copy helper script to switch Manager network mode at container start
-COPY scripts/comfy-manager-set-mode.sh /usr/local/bin/comfy-manager-set-mode
-RUN chmod +x /usr/local/bin/comfy-manager-set-mode
+Copy helper script to switch Manager network mode at container start
+COPY scripts/comfy-manager-set-mode.sh /usr/local/bin/comfy-manager-set-mode RUN chmod +x /usr/local/bin/comfy-manager-set-mode
 
-# Set the default command to run when starting the container
+Set the default command to run when starting the container
 CMD ["/start.sh"]
+
