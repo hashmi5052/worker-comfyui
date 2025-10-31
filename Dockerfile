@@ -26,8 +26,8 @@ ENV DEBIAN_FRONTEND=noninteractive \
 # =========================
 # Install Python 3.12, git, wget, ffmpeg, and libraries for GUI + video
 RUN apt-get update && apt-get install -y \
-    python3.12 \
-    python3.12-venv \
+    python3.10 \
+    python3.10-venv \
     git \
     wget \
     libgl1 \
