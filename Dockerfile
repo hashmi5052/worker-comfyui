@@ -87,7 +87,8 @@ RUN chmod +x /usr/local/bin/comfy-node-install
 # =========================
 
 # --- ComfyUI Manager ---
-RUN git clone https://github.com/Comfy-Org/ComfyUI-Manager.git /comfyui/custom_nodes/ComfyUI-Manager && \
+RUN rm -rf /comfyui/custom_nodes/ComfyUI-Manager && \
+    git clone https://github.com/Comfy-Org/ComfyUI-Manager.git /comfyui/custom_nodes/ComfyUI-Manager && \
     uv pip install -r /comfyui/custom_nodes/ComfyUI-Manager/requirements.txt
 
 # --- ComfyUI-GGUF ---
